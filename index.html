@@ -701,8 +701,16 @@
       actualizarEstadoAdmin();
     });
 
-    // Continuar: va a Vista B sin tocar localStorage
+    // Continuar: guarda configuración actual y navega a Vista B
     btnContinuar.addEventListener('click', () => {
+      const cantidadRaw  = parseInt(inputCantidad.value);
+      const cantidad     = (!isNaN(cantidadRaw) && cantidadRaw >= 1)
+        ? Math.min(30, cantidadRaw) : 1;
+      const inputs       = contenedorGanadores.querySelectorAll('input[type="text"]');
+      const ganadoresArr = Array.from(inputs).map(inp => inp.value.trim());
+      localStorage.setItem('condesa_cantidad',  cantidad);
+      localStorage.setItem('condesa_ganadores', JSON.stringify(ganadoresArr));
+      localStorage.removeItem('condesa_winner');
       vistaAdmin.style.display     = 'none';
       vistaSorteador.style.display = 'flex';
     });
@@ -883,14 +891,8 @@
     //   vMax_slow = 3 × 540 / 1.5 = 1080 = V_MAX  → transición sin salto ✓
     //   Al finalizar: pos = 2700 + 1080 × 1.5 × (1/3) = 2700 + 540 = 3240 = 54×60 ✓
 
-    const ITEM_H     = 60;
-    const WINNER_IDX = 54;
-    const V_MAX      = 1080;
-    const T_FAST_S   = 2.5;
-    const T_SLOW_S   = 1.5;
-    const TARGET_POS = WINNER_IDX * ITEM_H;
-    const POS_SLOW   = V_MAX * T_FAST_S;
-    const V_SLOW     = 3 * (TARGET_POS - POS_SLOW) / T_SLOW_S;
+    const ITEM_H = 60;
+    const V_MAX  = 1080;
 
     // ── Sorteo secuencial: una ruleta por ganador ───────────────
 
@@ -911,7 +913,7 @@
         ? 'Sorteando...'
         : `Sorteando ganador ${index + 1} de ${total}...`;
 
-      animarRuleta(participantes, ganador, () => {
+      animarRuleta(participantes, ganador, total, () => {
         if (total > 1) {
           listaAcumulativa.style.display = 'block';
           const item       = document.createElement('div');
@@ -929,10 +931,18 @@
       });
     }
 
-    function animarRuleta(participantes, ganador, onFin) {
-      // Construir array: WINNER_IDX nombres aleatorios + ganador + extras
+    function animarRuleta(participantes, ganador, total, onFin) {
+      // >5 ganadores: tiempos y WINNER_IDX a la mitad para mantener V_SLOW = V_MAX
+      const rapido    = total > 5;
+      const winnerIdx = rapido ? 27  : 54;
+      const tFastS    = rapido ? 1.25 : 2.5;
+      const tSlowS    = rapido ? 0.75 : 1.5;
+      const targetPos = winnerIdx * ITEM_H;
+      const posLenta  = V_MAX * tFastS;
+      const vLenta    = 3 * (targetPos - posLenta) / tSlowS;
+
       const arr = [];
-      for (let i = 0; i < WINNER_IDX; i++) {
+      for (let i = 0; i < winnerIdx; i++) {
         arr.push(participantes[Math.floor(Math.random() * participantes.length)]);
       }
       arr.push(ganador);
@@ -959,16 +969,16 @@
         const elapsed = (ts - startTs) / 1000;
 
         let pos;
-        if (elapsed < T_FAST_S) {
+        if (elapsed < tFastS) {
           pos = V_MAX * elapsed;
-        } else if (elapsed < T_FAST_S + T_SLOW_S) {
-          const t    = (elapsed - T_FAST_S) / T_SLOW_S;
+        } else if (elapsed < tFastS + tSlowS) {
+          const t    = (elapsed - tFastS) / tSlowS;
           const intg = t - t * t + (t * t * t) / 3;
-          pos = POS_SLOW + V_SLOW * T_SLOW_S * intg;
+          pos = posLenta + vLenta * tSlowS * intg;
         } else {
-          track.style.transform = `translateY(${60 - TARGET_POS}px)`;
+          track.style.transform = `translateY(${60 - targetPos}px)`;
           if (track.children[prevActiveIdx]) track.children[prevActiveIdx].classList.remove('activo');
-          if (track.children[WINNER_IDX])    track.children[WINNER_IDX].classList.add('activo');
+          if (track.children[winnerIdx])     track.children[winnerIdx].classList.add('activo');
           setTimeout(onFin, 350);
           return;
         }
