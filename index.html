@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta property="og:title" content="Sorteador — Condesa">
+  <meta property="og:description" content="Gran sorteo — gracias por participar">
+  <title>Sorteador — Condesa</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: #f1f1f1;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .contenedor {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ══════════════════════════════════════════
+       VISTA A — Admin
+    ══════════════════════════════════════════ */
+
+    #vista-admin {
+      min-height: 100vh;
+      justify-content: center;
+      padding: 48px 20px;
+    }
+
+    .admin-card {
+      width: 100%;
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .admin-titulo {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .admin-estado {
+      font-size: 13px;
+      font-weight: 400;
+      color: #666;
+      background: #f5f5f5;
+      border-left: 3px solid #ddd;
+      padding: 11px 14px;
+      line-height: 1.5;
+    }
+
+    .admin-estado strong { color: #333; font-weight: 600; }
+
+    .campo label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 8px;
+    }
+
+    .campo input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 14px;
+      color: #333;
+      border: 1px solid #ddd;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .campo input[type="text"]:focus { border-color: #333; }
+    .campo input[type="text"]::placeholder { color: #ccc; }
+
+    /* Aviso de un solo uso */
+    .admin-aviso {
+      font-size: 11px;
+      font-weight: 300;
+      color: #999;
+      line-height: 1.65;
+      letter-spacing: 0.02em;
+    }
+
+    /* Feedback tras guardar */
+    .admin-feedback {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      min-height: 18px; /* reservar espacio para evitar layout shift */
+    }
+
+    .admin-feedback.ok   { color: #2a7a4e; }
+    .admin-feedback.vacio { color: #999; }
+
+    /* Botones del admin */
+    .admin-botones {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-guardar-admin {
+      flex: 1;
+      padding: 13px;
+      background: transparent;
+      border: 1px solid #ccc;
+      color: #555;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-guardar-admin:hover { border-color: #888; color: #333; }
+
+    .btn-continuar {
+      flex: 1;
+      padding: 13px;
+      background: #333;
+      color: #f1f1f1;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-continuar:hover { background: #111; }
+
+    .admin-nota {
+      font-size: 11px;
+      font-weight: 300;
+      color: #bbb;
+      letter-spacing: 0.04em;
+    }
+
+    /* ══════════════════════════════════════════
+       VISTA B — Sorteador
+    ══════════════════════════════════════════ */
+
+    #vista-sorteador {
+      padding: 48px 20px 60px;
+      gap: 24px;
+    }
+
+    .logo {
+      max-width: 260px;
+      width: 100%;
+      display: block;
+    }
+
+    @media (max-width: 480px) {
+      .logo { max-width: 180px; }
+    }
+
+    .tagline {
+      font-weight: 300;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: #666;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    #pantalla-inicial {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 220px;
+      padding: 16px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      color: #333;
+      background: #fff;
+      border: 1px solid #ddd;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+      line-height: 1.7;
+    }
+
+    textarea:focus { border-color: #333; }
+    textarea::placeholder { color: #bbb; }
+
+    .btn-sortear {
+      width: 100%;
+      padding: 16px;
+      background: #333;
+      color: #f1f1f1;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-sortear:hover { background: #111; }
+
+    .btn-grabar {
+      background: transparent;
+      border: 1px solid #ccc;
+      color: #666;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      padding: 10px 22px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-grabar:hover { border-color: #888; color: #333; }
+    .btn-grabar.grabando { color: #c00; border-color: #c00; }
+
+    .msg-ios {
+      font-size: 12px;
+      font-weight: 300;
+      color: #999;
+      text-align: center;
+      letter-spacing: 0.04em;
+      line-height: 1.6;
+    }
+
+    /* ── Panel ruleta ─────────────────────────────── */
+
+    #panel-ruleta {
+      display: none;
+      width: 100%;
+      flex-direction: column;
+      align-items: center;
+      background: #333;
+      padding: 40px 0 44px;
+    }
+
+    .ruleta-label {
+      color: #888;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+    }
+
+    /* Ventana visible: 3 ítems × 60px = 180px */
+    .ruleta-ventana {
+      position: relative;
+      width: 100%;
+      height: 180px;
+      overflow: hidden;
+    }
+
+    /* Líneas separadoras del ítem central */
+    .ruleta-linea-top,
+    .ruleta-linea-bottom {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: #555;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .ruleta-linea-top    { top: 60px; }
+    .ruleta-linea-bottom { top: 120px; }
+
+    /* Track desplazable con todos los nombres */
+    .ruleta-track {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      will-change: transform; /* capa compuesta para GPU */
+    }
+
+    /* Cada ítem del carrusel */
+    .ruleta-item {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 400;
+      color: #f1f1f1;
+      opacity: 0.35;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 0 20px;
+      width: 100%;
+    }
+
+    /* Ítem central activo */
+    .ruleta-item.activo {
+      font-size: 26px;
+      font-weight: 800;
+      opacity: 1;
+    }
+
+    /* ── Panel ganador ────────────────────────────── */
+
+    #panel-ganador {
+      display: none;
+      width: 100%;
+      flex-direction: column;
+      align-items: center;
+      background: #333;
+      padding: 52px 24px 48px;
+      opacity: 0;
+      transform: scale(0.8);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    #panel-ganador.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .ganador-etiqueta {
+      font-size: 10px;
+      font-weight: 500;
+      color: #aaa;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    .ganador-nombre {
+      font-size: 32px;
+      font-weight: 800;
+      color: #f1f1f1;
+      text-align: center;
+      margin-bottom: 18px;
+      word-break: break-word;
+      line-height: 1.2;
+    }
+
+    .ganador-mensaje {
+      font-size: 13px;
+      font-weight: 300;
+      color: #888;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    #btn-volver {
+      display: none;
+      width: 100%;
+      padding: 14px;
+      background: transparent;
+      border: 1px solid #333;
+      color: #333;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #btn-volver:hover { background: #e6e6e6; }
+
+    /* Canvas confeti */
+    #canvas-confeti {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 999;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="canvas-confeti"></canvas>
+
+  <!-- ══ VISTA A: Admin ════════════════════════════════════════════ -->
+  <div id="vista-admin" class="contenedor">
+    <div class="admin-card">
+
+      <p class="admin-titulo">Configuración de sorteo</p>
+
+      <div class="admin-estado" id="admin-estado"></div>
+
+      <div class="campo">
+        <label for="input-ganador">Ganador predefinido (opcional)</label>
+        <input
+          type="text"
+          id="input-ganador"
+          placeholder="Nombre exacto del participante..."
+          autocomplete="off"
+        >
+      </div>
+
+      <p class="admin-aviso">
+        El ganador predefinido se usa una sola vez y se borra automáticamente
+        al revelar el resultado. Para un nuevo sorteo con ganador fijo, actualizá la página.
+      </p>
+
+      <div class="admin-feedback" id="admin-feedback"></div>
+
+      <div class="admin-botones">
+        <button class="btn-guardar-admin" id="btn-guardar-admin">Guardar</button>
+        <button class="btn-continuar"     id="btn-continuar">Continuar →</button>
+      </div>
+
+      <p class="admin-nota">Esta pantalla no se graba ni se comparte.</p>
+
+    </div>
+  </div>
+
+  <!-- ══ VISTA B: Sorteador ════════════════════════════════════════ -->
+  <div id="vista-sorteador" class="contenedor" style="display:none;">
+
+    <img src="logosorteador.svg" alt="Condesa" class="logo">
+    <p class="tagline">Gran sorteo — gracias por participar</p>
+
+    <!-- Pantalla inicial: textarea + botones -->
+    <div id="pantalla-inicial">
+      <textarea id="textarea-participantes" placeholder="Pegá los nombres aquí, uno por línea..."></textarea>
+      <button class="btn-sortear" id="btn-sortear">SORTEAR</button>
+      <button class="btn-grabar"  id="btn-grabar">● Grabar pantalla</button>
+      <p class="msg-ios" id="msg-ios" style="display:none;">
+        En iPhone, usá la grabación nativa de pantalla (Centro de Control).
+      </p>
+    </div>
+
+    <!-- Panel ruleta: track desplazable -->
+    <div id="panel-ruleta">
+      <div class="ruleta-label">Sorteando...</div>
+      <div class="ruleta-ventana">
+        <div class="ruleta-linea-top"></div>
+        <div class="ruleta-linea-bottom"></div>
+        <div class="ruleta-track" id="ruleta-track"></div>
+      </div>
+    </div>
+
+    <!-- Panel ganador -->
+    <div id="panel-ganador">
+      <div class="ganador-etiqueta">✦ Ganador ✦</div>
+      <div class="ganador-nombre" id="ganador-nombre"></div>
+      <div class="ganador-mensaje">¡Felicitaciones! Gracias a todos por participar.</div>
+    </div>
+
+    <button id="btn-volver">Volver a sortear</button>
+
+  </div>
+
+  <script>
+    // ─── Referencias ───────────────────────────────────────────────
+    const vistaAdmin       = document.getElementById('vista-admin');
+    const vistaSorteador   = document.getElementById('vista-sorteador');
+    const inputGanador     = document.getElementById('input-ganador');
+    const btnGuardarAdmin  = document.getElementById('btn-guardar-admin');
+    const btnContinuar     = document.getElementById('btn-continuar');
+    const elAdminEstado    = document.getElementById('admin-estado');
+    const elAdminFeedback  = document.getElementById('admin-feedback');
+    const btnSortear       = document.getElementById('btn-sortear');
+    const btnGrabar        = document.getElementById('btn-grabar');
+    const btnVolver        = document.getElementById('btn-volver');
+    const textarea         = document.getElementById('textarea-participantes');
+    const pantallaInicial  = document.getElementById('pantalla-inicial');
+    const panelRuleta      = document.getElementById('panel-ruleta');
+    const panelGanador     = document.getElementById('panel-ganador');
+    const elGanadorNombre  = document.getElementById('ganador-nombre');
+    const canvas           = document.getElementById('canvas-confeti');
+    const ctx              = canvas.getContext('2d');
+
+    // ─── Estado de grabación ───────────────────────────────────────
+    let mediaRecorder   = null;
+    let grabando        = false;
+    let chunksGrabacion = [];
+    let rafConfeti      = null;
+
+    // ══════════════════════════════════════════════════════════════
+    // VISTA A — Admin
+    // ══════════════════════════════════════════════════════════════
+
+    function actualizarEstadoAdmin() {
+      const valor = localStorage.getItem('condesa_winner');
+      elAdminEstado.innerHTML = valor
+        ? `Ganador seteado: <strong>${valor}</strong>`
+        : 'Sorteo al azar (sin ganador predefinido)';
+    }
+
+    actualizarEstadoAdmin();
+
+    // Enter en el input dispara Guardar
+    inputGanador.addEventListener('keydown', e => {
+      if (e.key === 'Enter') btnGuardarAdmin.click();
+    });
+
+    // Guardar: solo persiste el dato y muestra confirmación. No navega.
+    btnGuardarAdmin.addEventListener('click', () => {
+      const nombre = inputGanador.value.trim();
+
+      if (nombre) {
+        localStorage.setItem('condesa_winner', nombre);
+        elAdminFeedback.textContent = `✓ Ganador guardado: ${nombre}`;
+        elAdminFeedback.className   = 'admin-feedback ok';
+        actualizarEstadoAdmin();
+      } else {
+        elAdminFeedback.textContent = 'El sorteo será al azar.';
+        elAdminFeedback.className   = 'admin-feedback vacio';
+      }
+    });
+
+    // Continuar: va a Vista B sin tocar localStorage
+    btnContinuar.addEventListener('click', () => {
+      vistaAdmin.style.display     = 'none';
+      vistaSorteador.style.display = 'flex';
+    });
+
+    // ══════════════════════════════════════════════════════════════
+    // VISTA B — Grabación de pantalla
+    // ══════════════════════════════════════════════════════════════
+
+    const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    if (esIOS) {
+      btnGrabar.style.display = 'none';
+      document.getElementById('msg-ios').style.display = 'block';
+    } else {
+      btnGrabar.addEventListener('click', iniciarGrabacion);
+    }
+
+    async function iniciarGrabacion() {
+      if (grabando) return;
+
+      if (!navigator.mediaDevices?.getDisplayMedia) {
+        btnGrabar.textContent = 'Grabación no disponible';
+        btnGrabar.disabled    = true;
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        chunksGrabacion = [];
+        mediaRecorder   = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunksGrabacion.push(e.data); };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunksGrabacion, { type: 'video/webm' });
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          a.href     = url;
+          a.download = 'sorteo-condesa.webm';
+          a.click();
+          URL.revokeObjectURL(url);
+          btnGrabar.textContent = '● Grabar pantalla';
+          btnGrabar.classList.remove('grabando');
+        };
+
+        mediaRecorder.start();
+        grabando              = true;
+        btnGrabar.textContent = '● Grabando...';
+        btnGrabar.classList.add('grabando');
+
+        stream.getVideoTracks()[0].addEventListener('ended', () => {
+          grabando              = false;
+          btnGrabar.textContent = '● Grabar pantalla';
+          btnGrabar.classList.remove('grabando');
+        });
+      } catch {
+        // Usuario canceló el selector de pantalla
+      }
+    }
+
+    function detenerGrabacion() {
+      if (!grabando || !mediaRecorder) return;
+      setTimeout(() => {
+        mediaRecorder.stop();
+        grabando = false;
+      }, 6000); // 6s después del ganador para capturar el confeti
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // VISTA B — Sorteo
+    // ══════════════════════════════════════════════════════════════
+
+    btnSortear.addEventListener('click', () => {
+      const participantes = textarea.value
+        .split('\n')
+        .map(n => n.trim())
+        .filter(n => n.length > 0);
+
+      if (participantes.length === 0) {
+        alert('Agregá al menos un participante.');
+        return;
+      }
+
+      // Leer ganador predefinido en el momento exacto del click
+      const preset       = localStorage.getItem('condesa_winner');
+      const coincidencia = preset
+        ? participantes.find(p => p.trim().toLowerCase() === preset.trim().toLowerCase())
+        : null;
+      const ganador      = coincidencia || participantes[Math.floor(Math.random() * participantes.length)];
+
+      // Consumir la key — se usa una sola vez
+      localStorage.removeItem('condesa_winner');
+
+      animarRuleta(participantes, ganador);
+    });
+
+    // ══════════════════════════════════════════════════════════════
+    // ANIMACIÓN DE RULETA — offset continuo en píxeles + translateY
+    // ══════════════════════════════════════════════════════════════
+    //
+    // Geometría:
+    //   ITEM_H = 60px · ventana = 3 ítems = 180px · centro ventana = 90px
+    //   trackY para ítem i centrado = 90 - (i*60 + 30) = 60 - i*60
+    //   Equivalente: trackY = 60 - pos   donde pos = i*60 (px scrolleados)
+    //
+    // Velocidades:
+    //   V_MAX = 1080 px/s (18px/frame × 60fps)
+    //   Fase rápida (0–2.5s): pos = V_MAX × elapsed_s  (analítico, exacto)
+    //   Fase lenta (2.5–4s):  pos = POS_SLOW + V_MAX × T_SLOW_S × ∫(1-t)² dt
+    //                              = POS_SLOW + V_MAX × T_SLOW_S × (t − t² + t³/3)
+    //
+    // WINNER_IDX = 54:
+    //   POS_SLOW = V_MAX × 2.5 = 2700 px
+    //   remaining = 54×60 − 2700 = 540 px
+    //   vMax_slow = 3 × 540 / 1.5 = 1080 = V_MAX  → transición sin salto ✓
+    //   Al finalizar: pos = 2700 + 1080 × 1.5 × (1/3) = 2700 + 540 = 3240 = 54×60 ✓
+
+    const ITEM_H      = 60;
+    const WINNER_IDX  = 54;
+    const V_MAX       = 1080;   // px/s
+    const T_FAST_S    = 2.5;    // s
+    const T_SLOW_S    = 1.5;    // s
+    const TARGET_POS  = WINNER_IDX * ITEM_H;   // 3240 px
+    const POS_SLOW    = V_MAX * T_FAST_S;      // 2700 px
+    const V_SLOW      = 3 * (TARGET_POS - POS_SLOW) / T_SLOW_S; // 1080 px/s
+
+    function animarRuleta(participantes, ganador) {
+      pantallaInicial.style.display = 'none';
+      panelRuleta.style.display     = 'flex';
+
+      // Construir array: WINNER_IDX nombres aleatorios + ganador + extras
+      const arr = [];
+      for (let i = 0; i < WINNER_IDX; i++) {
+        arr.push(participantes[Math.floor(Math.random() * participantes.length)]);
+      }
+      arr.push(ganador); // índice WINNER_IDX
+      for (let i = 0; i < 5; i++) {
+        arr.push(participantes[Math.floor(Math.random() * participantes.length)]);
+      }
+
+      // Poblar el DOM del track
+      const track = document.getElementById('ruleta-track');
+      track.innerHTML = '';
+      for (const nombre of arr) {
+        const div       = document.createElement('div');
+        div.className   = 'ruleta-item';
+        div.textContent = nombre;
+        track.appendChild(div);
+      }
+
+      // Estado inicial: ítem 0 centrado, destacado
+      track.style.transform = 'translateY(60px)';
+      track.children[0].classList.add('activo');
+      let prevActiveIdx = 0;
+
+      let startTs = null;
+
+      function frame(ts) {
+        if (!startTs) startTs = ts;
+        const elapsed = (ts - startTs) / 1000; // segundos
+
+        let pos;
+        if (elapsed < T_FAST_S) {
+          // Fase rápida: velocidad constante, fórmula analítica
+          pos = V_MAX * elapsed;
+        } else if (elapsed < T_FAST_S + T_SLOW_S) {
+          // Fase lenta: velocidad(t) = V_SLOW*(1-t)^2
+          // posición(t) = POS_SLOW + V_SLOW * T_SLOW_S * (t - t^2 + t^3/3)
+          const t    = (elapsed - T_FAST_S) / T_SLOW_S;
+          const intg = t - t * t + (t * t * t) / 3;
+          pos = POS_SLOW + V_SLOW * T_SLOW_S * intg;
+        } else {
+          // Fijar posición exacta y terminar
+          track.style.transform = `translateY(${60 - TARGET_POS}px)`;
+
+          // Asegurar que el ítem activo es el ganador
+          if (track.children[prevActiveIdx]) track.children[prevActiveIdx].classList.remove('activo');
+          if (track.children[WINNER_IDX])    track.children[WINNER_IDX].classList.add('activo');
+
+          setTimeout(() => revelarGanador(ganador), 350);
+          return;
+        }
+
+        // Aplicar offset al track
+        track.style.transform = `translateY(${60 - pos}px)`;
+
+        // Actualizar clase activo solo cuando cambia el ítem central
+        const centerIdx = Math.round(pos / ITEM_H);
+        if (centerIdx !== prevActiveIdx) {
+          if (track.children[prevActiveIdx]) track.children[prevActiveIdx].classList.remove('activo');
+          if (track.children[centerIdx])     track.children[centerIdx].classList.add('activo');
+          prevActiveIdx = centerIdx;
+        }
+
+        requestAnimationFrame(frame);
+      }
+
+      requestAnimationFrame(frame);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Revelación del ganador
+    // ══════════════════════════════════════════════════════════════
+
+    function revelarGanador(ganador) {
+      panelRuleta.style.display   = 'none';
+      elGanadorNombre.textContent = ganador;
+      panelGanador.style.display  = 'flex';
+
+      // Doble RAF: el browser debe pintar display:flex antes de disparar la transición
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          panelGanador.classList.add('visible');
+        });
+      });
+
+      iniciarConfeti();
+      detenerGrabacion();
+
+      setTimeout(() => { btnVolver.style.display = 'block'; }, 5200);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Confeti
+    // ══════════════════════════════════════════════════════════════
+
+    const COLORES = ['#C9A84C', '#C9A84C', '#E8D5A3', '#E8D5A3', '#888888', '#333333', '#ffffff'];
+
+    function iniciarConfeti() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+      canvas.style.display = 'block';
+
+      const particulas = [];
+      for (let i = 0; i < 120; i++) {
+        particulas.push({
+          x:        Math.random() * canvas.width,
+          y:        -10 - Math.random() * 120,
+          vx:       (Math.random() - 0.5) * 2,
+          vy:       1.8 + Math.random() * 2.8,
+          color:    COLORES[Math.floor(Math.random() * COLORES.length)],
+          forma:    Math.random() > 0.45 ? 'rect' : 'circ',
+          angulo:   Math.random() * Math.PI * 2,
+          velAng:   (Math.random() - 0.5) * 0.12,
+          fase:     Math.random() * Math.PI * 2,
+          amplitud: 0.6 + Math.random() * 1.6,
+        });
+      }
+
+      let tsInicio = null;
+
+      function dibujar(ts) {
+        if (!tsInicio) tsInicio = ts;
+        const elapsed = ts - tsInicio;
+
+        if (elapsed > 5000) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          canvas.style.display = 'none';
+          return;
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (const p of particulas) {
+          p.y      += p.vy;
+          p.fase   += 0.045;
+          p.x      += p.vx + Math.sin(p.fase) * p.amplitud;
+          p.angulo += p.velAng;
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.angulo);
+          ctx.fillStyle = p.color;
+
+          if (p.forma === 'circ') {
+            ctx.beginPath();
+            ctx.arc(0, 0, 2, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.fillRect(-1, -4, 2, 8);
+          }
+
+          ctx.restore();
+        }
+
+        rafConfeti = requestAnimationFrame(dibujar);
+      }
+
+      rafConfeti = requestAnimationFrame(dibujar);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Volver a sortear
+    // ══════════════════════════════════════════════════════════════
+
+    btnVolver.addEventListener('click', () => {
+      if (rafConfeti) cancelAnimationFrame(rafConfeti);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.style.display = 'none';
+
+      panelGanador.classList.remove('visible');
+      panelGanador.style.display = 'none';
+      btnVolver.style.display    = 'none';
+
+      textarea.value                = '';
+      pantallaInicial.style.display = 'flex';
+    });
+  </script>
+</body>
+</html>
