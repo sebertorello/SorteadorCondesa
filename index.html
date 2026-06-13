@@ -848,13 +848,20 @@
       const pool           = [...participantes];
       const ganadoresFinal = [];
 
+      const normalizar = s => s.trim().toLowerCase().replace(/^@/, '');
+
       for (let i = 0; i < cantidad && pool.length > 0; i++) {
-        const preset = (predefinidos[i] || '').trim();
+        const preset = normalizar(predefinidos[i] || '');
+
         if (preset) {
-          const normalizar = s => s.trim().toLowerCase().replace(/^@/, '');
-          const idx = pool.findIndex(p => normalizar(p) === normalizar(preset));
-          if (idx !== -1) { ganadoresFinal.push(pool[idx]); pool.splice(idx, 1); continue; }
+          const idx = pool.findIndex(p => normalizar(p) === preset);
+          if (idx !== -1) {
+            ganadoresFinal.push(pool[idx]);
+            pool.splice(idx, 1);
+            continue;
+          }
         }
+
         const idx = Math.floor(Math.random() * pool.length);
         ganadoresFinal.push(pool[idx]);
         pool.splice(idx, 1);
@@ -863,6 +870,8 @@
       console.log('DEBUG cantidad:', cantidad);
       console.log('DEBUG predefinidos:', predefinidos);
       console.log('DEBUG ganadoresFinal:', ganadoresFinal);
+      console.log('DEBUG normalizado preset[0]:', normalizar(predefinidos[0] || ''));
+      console.log('DEBUG normalizado pool[0]:', normalizar(pool[0] || ''));
 
       pantallaInicial.style.display  = 'none';
       listaItems.innerHTML           = '';
