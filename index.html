@@ -851,6 +851,10 @@
         pool.splice(idx, 1);
       }
 
+      console.log('DEBUG cantidad:', cantidad);
+      console.log('DEBUG predefinidos:', predefinidos);
+      console.log('DEBUG ganadoresFinal:', ganadoresFinal);
+
       pantallaInicial.style.display  = 'none';
       listaItems.innerHTML           = '';
       listaAcumulativa.style.display = 'none';
@@ -908,19 +912,20 @@
         : `Sorteando ganador ${index + 1} de ${total}...`;
 
       animarRuleta(participantes, ganador, () => {
-        // Mostrar lista acumulativa y agregar este ganador
-        listaAcumulativa.style.display = 'block';
-        const item       = document.createElement('div');
-        item.className   = 'lista-item';
-        item.textContent = total === 1 ? ganador : `${index + 1}. ${ganador}`;
-        listaItems.appendChild(item);
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => { item.classList.add('visible'); });
-        });
+        if (total > 1) {
+          listaAcumulativa.style.display = 'block';
+          const item       = document.createElement('div');
+          item.className   = 'lista-item';
+          item.textContent = `${index + 1}. ${ganador}`;
+          listaItems.appendChild(item);
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => { item.classList.add('visible'); });
+          });
+        }
 
         setTimeout(() => {
           sortearSiguiente(index + 1, ganadoresFinal, participantes);
-        }, 1500);
+        }, total > 1 ? 1500 : 0);
       });
     }
 
