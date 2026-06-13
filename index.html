@@ -851,7 +851,8 @@
       for (let i = 0; i < cantidad && pool.length > 0; i++) {
         const preset = (predefinidos[i] || '').trim();
         if (preset) {
-          const idx = pool.findIndex(p => p.trim().toLowerCase() === preset.toLowerCase());
+          const normalizar = s => s.trim().toLowerCase().replace(/^@/, '');
+          const idx = pool.findIndex(p => normalizar(p) === normalizar(preset));
           if (idx !== -1) { ganadoresFinal.push(pool[idx]); pool.splice(idx, 1); continue; }
         }
         const idx = Math.floor(Math.random() * pool.length);
