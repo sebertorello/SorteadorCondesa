@@ -449,6 +449,32 @@
       margin-top: 20px;
     }
 
+    /* Lista acumulativa de ganadores (mientras sortea) */
+    #lista-acumulativa {
+      width: 100%;
+      background: #f1f1f1;
+      padding: 16px 24px;
+    }
+
+    .lista-item {
+      font-size: 18px;
+      font-weight: 700;
+      color: #333;
+      padding: 10px 0;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .lista-item.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .lista-item + .lista-item {
+      border-top: 1px solid #ddd;
+    }
+
     #btn-volver {
       display: none;
       width: 100%;
@@ -547,6 +573,11 @@
       </div>
     </div>
 
+    <!-- Lista acumulativa de ganadores revelados -->
+    <div id="lista-acumulativa" style="display:none;">
+      <div id="lista-items"></div>
+    </div>
+
     <!-- Panel ganador -->
     <div id="panel-ganador">
       <div class="ganador-etiqueta" id="ganador-etiqueta"></div>
@@ -579,6 +610,8 @@
     const ruletaLabel         = document.getElementById('ruleta-label');
     const inputCantidad       = document.getElementById('input-cantidad');
     const contenedorGanadores = document.getElementById('contenedor-ganadores');
+    const listaAcumulativa    = document.getElementById('lista-acumulativa');
+    const listaItems          = document.getElementById('lista-items');
     const canvas              = document.getElementById('canvas-confeti');
     const ctx                 = canvas.getContext('2d');
     const acordeonBtn         = document.getElementById('btn-acordeon');
@@ -804,21 +837,25 @@
       let predefinidos = [];
       try { predefinidos = JSON.parse(localStorage.getItem('condesa_ganadores')) || []; } catch {}
 
-      const pool      = [...participantes];
-      const ganadores = [];
+      const pool           = [...participantes];
+      const ganadoresFinal = [];
 
       for (let i = 0; i < cantidad && pool.length > 0; i++) {
         const preset = (predefinidos[i] || '').trim();
         if (preset) {
           const idx = pool.findIndex(p => p.trim().toLowerCase() === preset.toLowerCase());
-          if (idx !== -1) { ganadores.push(pool[idx]); pool.splice(idx, 1); continue; }
+          if (idx !== -1) { ganadoresFinal.push(pool[idx]); pool.splice(idx, 1); continue; }
         }
         const idx = Math.floor(Math.random() * pool.length);
-        ganadores.push(pool[idx]);
+        ganadoresFinal.push(pool[idx]);
         pool.splice(idx, 1);
       }
 
-      iniciarSecuencia(participantes, ganadores);
+      pantallaInicial.style.display  = 'none';
+      listaItems.innerHTML           = '';
+      listaAcumulativa.style.display = 'none';
+
+      sortearSiguiente(0, ganadoresFinal, participantes);
     });
 
     // ══════════════════════════════════════════════════════════════
@@ -842,60 +879,62 @@
     //   vMax_slow = 3 × 540 / 1.5 = 1080 = V_MAX  → transición sin salto ✓
     //   Al finalizar: pos = 2700 + 1080 × 1.5 × (1/3) = 2700 + 540 = 3240 = 54×60 ✓
 
-    const ITEM_H      = 60;
-    const WINNER_IDX  = 54;
-    const V_MAX       = 1080;   // px/s
-    const T_FAST_S    = 2.5;    // s
-    const T_SLOW_S    = 1.5;    // s
-    const TARGET_POS  = WINNER_IDX * ITEM_H;   // 3240 px
-    const POS_SLOW    = V_MAX * T_FAST_S;      // 2700 px
-    const V_SLOW      = 3 * (TARGET_POS - POS_SLOW) / T_SLOW_S; // 1080 px/s
+    const ITEM_H     = 60;
+    const WINNER_IDX = 54;
+    const V_MAX      = 1080;
+    const T_FAST_S   = 2.5;
+    const T_SLOW_S   = 1.5;
+    const TARGET_POS = WINNER_IDX * ITEM_H;
+    const POS_SLOW   = V_MAX * T_FAST_S;
+    const V_SLOW     = 3 * (TARGET_POS - POS_SLOW) / T_SLOW_S;
 
-    // ── Secuencia de ruletas, una por ganador ───────────────────
+    // ── Sorteo secuencial: una ruleta por ganador ───────────────
 
-    function iniciarSecuencia(participantes, ganadores) {
-      pantallaInicial.style.display = 'none';
-      let turno = 0;
-
-      function siguiente() {
-        const ganador  = ganadores[turno];
-        const esUltimo = turno === ganadores.length - 1;
-        turno++;
-
-        animarRuleta(participantes, ganador, turno, ganadores.length, () => {
-          if (esUltimo) {
-            localStorage.removeItem('condesa_ganadores');
-            localStorage.removeItem('condesa_cantidad');
-            revelarFinal(ganadores);
-          } else {
-            mostrarIntermedio(ganador, siguiente);
-          }
-        });
+    function sortearSiguiente(index, ganadoresFinal, participantes) {
+      if (index >= ganadoresFinal.length) {
+        mostrarPanelFinal(ganadoresFinal);
+        return;
       }
 
-      siguiente();
-    }
+      const ganador = ganadoresFinal[index];
+      const total   = ganadoresFinal.length;
 
-    function animarRuleta(participantes, ganador, turno, total, onFin) {
       panelGanador.style.display    = 'none';
       panelGanador.classList.remove('visible');
       panelRuleta.style.display     = 'flex';
 
       ruletaLabel.textContent = total === 1
         ? 'Sorteando...'
-        : `Sorteando ganador ${turno} de ${total}...`;
+        : `Sorteando ganador ${index + 1} de ${total}...`;
 
+      animarRuleta(participantes, ganador, () => {
+        // Mostrar lista acumulativa y agregar este ganador
+        listaAcumulativa.style.display = 'block';
+        const item       = document.createElement('div');
+        item.className   = 'lista-item';
+        item.textContent = total === 1 ? ganador : `${index + 1}. ${ganador}`;
+        listaItems.appendChild(item);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => { item.classList.add('visible'); });
+        });
+
+        setTimeout(() => {
+          sortearSiguiente(index + 1, ganadoresFinal, participantes);
+        }, 1500);
+      });
+    }
+
+    function animarRuleta(participantes, ganador, onFin) {
       // Construir array: WINNER_IDX nombres aleatorios + ganador + extras
       const arr = [];
       for (let i = 0; i < WINNER_IDX; i++) {
         arr.push(participantes[Math.floor(Math.random() * participantes.length)]);
       }
-      arr.push(ganador); // índice WINNER_IDX
+      arr.push(ganador);
       for (let i = 0; i < 5; i++) {
         arr.push(participantes[Math.floor(Math.random() * participantes.length)]);
       }
 
-      // Poblar el DOM del track
       const track = document.getElementById('ruleta-track');
       track.innerHTML = '';
       for (const nombre of arr) {
@@ -905,43 +944,32 @@
         track.appendChild(div);
       }
 
-      // Estado inicial: ítem 0 centrado, destacado
       track.style.transform = 'translateY(60px)';
       track.children[0].classList.add('activo');
       let prevActiveIdx = 0;
-
       let startTs = null;
 
       function frame(ts) {
         if (!startTs) startTs = ts;
-        const elapsed = (ts - startTs) / 1000; // segundos
+        const elapsed = (ts - startTs) / 1000;
 
         let pos;
         if (elapsed < T_FAST_S) {
-          // Fase rápida: velocidad constante, fórmula analítica
           pos = V_MAX * elapsed;
         } else if (elapsed < T_FAST_S + T_SLOW_S) {
-          // Fase lenta: velocidad(t) = V_SLOW*(1-t)^2
-          // posición(t) = POS_SLOW + V_SLOW * T_SLOW_S * (t - t^2 + t^3/3)
           const t    = (elapsed - T_FAST_S) / T_SLOW_S;
           const intg = t - t * t + (t * t * t) / 3;
           pos = POS_SLOW + V_SLOW * T_SLOW_S * intg;
         } else {
-          // Fijar posición exacta y terminar
           track.style.transform = `translateY(${60 - TARGET_POS}px)`;
-
-          // Asegurar que el ítem activo es el ganador
           if (track.children[prevActiveIdx]) track.children[prevActiveIdx].classList.remove('activo');
           if (track.children[WINNER_IDX])    track.children[WINNER_IDX].classList.add('activo');
-
           setTimeout(onFin, 350);
           return;
         }
 
-        // Aplicar offset al track
         track.style.transform = `translateY(${60 - pos}px)`;
 
-        // Actualizar clase activo solo cuando cambia el ítem central
         const centerIdx = Math.round(pos / ITEM_H);
         if (centerIdx !== prevActiveIdx) {
           if (track.children[prevActiveIdx]) track.children[prevActiveIdx].classList.remove('activo');
@@ -955,32 +983,16 @@
       requestAnimationFrame(frame);
     }
 
-    // ── Pausa entre ruletas: muestra nombre 2s sin confeti ─────
-
-    function mostrarIntermedio(ganador, onFin) {
-      panelRuleta.style.display     = 'none';
-      ganadorEtiqueta.style.display = 'none';
-      ganadorMensaje.style.display  = 'none';
-      ganadorCuerpo.innerHTML = `<div class="ganador-nombre">${ganador}</div>`;
-      panelGanador.classList.remove('visible');
-      panelGanador.style.display = 'flex';
-
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => { panelGanador.classList.add('visible'); });
-      });
-
-      setTimeout(() => {
-        panelGanador.classList.remove('visible');
-        setTimeout(() => { panelGanador.style.display = 'none'; onFin(); }, 420);
-      }, 2000);
-    }
-
     // ── Panel final: todos los ganadores + confeti ──────────────
 
-    function revelarFinal(ganadores) {
-      panelRuleta.style.display = 'none';
-      const esMultiple = ganadores.length > 1;
+    function mostrarPanelFinal(ganadores) {
+      panelRuleta.style.display      = 'none';
+      listaAcumulativa.style.display = 'none';
 
+      localStorage.removeItem('condesa_ganadores');
+      localStorage.removeItem('condesa_cantidad');
+
+      const esMultiple = ganadores.length > 1;
       ganadorEtiqueta.textContent   = esMultiple ? '✦ Ganadores ✦' : '✦ Ganador ✦';
       ganadorEtiqueta.style.display = '';
       ganadorMensaje.textContent    = esMultiple
@@ -1087,9 +1099,11 @@
       canvas.style.display = 'none';
 
       panelGanador.classList.remove('visible');
-      panelGanador.style.display = 'none';
-      ganadorCuerpo.innerHTML    = '';
-      btnVolver.style.display    = 'none';
+      panelGanador.style.display     = 'none';
+      ganadorCuerpo.innerHTML        = '';
+      btnVolver.style.display        = 'none';
+      listaItems.innerHTML           = '';
+      listaAcumulativa.style.display = 'none';
 
       textarea.value                = '';
       pantallaInicial.style.display = 'flex';
