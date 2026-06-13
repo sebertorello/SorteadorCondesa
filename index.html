@@ -247,13 +247,47 @@
     .btn-grabar:hover { border-color: #888; color: #333; }
     .btn-grabar.grabando { color: #c00; border-color: #c00; }
 
-    .msg-ios {
+    #tutorial-grabacion {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 16px;
+      width: 100%;
+    }
+
+    .tutorial-titulo {
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 12px;
+    }
+
+    .tutorial-subtitulo {
+      font-size: 11px;
+      font-weight: 600;
+      color: #333;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .tutorial-subtitulo-sep {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid #eee;
+    }
+
+    .tutorial-paso {
       font-size: 12px;
       font-weight: 300;
-      color: #999;
-      text-align: center;
-      letter-spacing: 0.04em;
-      line-height: 1.6;
+      color: #555;
+      line-height: 1.8;
+      margin-bottom: 2px;
+    }
+
+    .tutorial-paso strong {
+      font-weight: 600;
+      color: #333;
     }
 
     /* ── Panel ruleta ─────────────────────────────── */
@@ -456,9 +490,7 @@
       <textarea id="textarea-participantes" placeholder="Pegá los nombres aquí, uno por línea..."></textarea>
       <button class="btn-sortear" id="btn-sortear">SORTEAR</button>
       <button class="btn-grabar"  id="btn-grabar">● Grabar pantalla</button>
-      <p class="msg-ios" id="msg-ios" style="display:none;">
-        En iPhone, usá la grabación nativa de pantalla (Centro de Control).
-      </p>
+      <div id="tutorial-grabacion" style="display:none;"></div>
     </div>
 
     <!-- Panel ruleta: track desplazable -->
@@ -501,6 +533,7 @@
     const elGanadorNombre  = document.getElementById('ganador-nombre');
     const canvas           = document.getElementById('canvas-confeti');
     const ctx              = canvas.getContext('2d');
+    const tutorialEl       = document.getElementById('tutorial-grabacion');
 
     // ─── Estado de grabación ───────────────────────────────────────
     let mediaRecorder   = null;
@@ -551,11 +584,53 @@
     // VISTA B — Grabación de pantalla
     // ══════════════════════════════════════════════════════════════
 
-    const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const esIOS     = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    const esAndroid = /Android/.test(navigator.userAgent);
+
+    const TUTORIAL_IOS = `
+      <p class="tutorial-titulo">Cómo grabar el sorteo</p>
+      <p class="tutorial-paso"><strong>1.</strong> Antes de sortear, activá la grabación nativa:<br>Abrí el Centro de Control (deslizá desde arriba a la derecha)</p>
+      <p class="tutorial-paso"><strong>2.</strong> Tocá el ícono ⏺ de grabación de pantalla<br>(Si no lo ves, agregalo en Ajustes → Centro de Control)</p>
+      <p class="tutorial-paso"><strong>3.</strong> Volvé al navegador y presioná SORTEAR</p>
+      <p class="tutorial-paso"><strong>4.</strong> Cuando terminen los festejos, volvé al Centro de Control y detené la grabación<br>El video se guarda automáticamente en Fotos.</p>
+    `;
+
+    const TUTORIAL_ANDROID = `
+      <p class="tutorial-titulo">Cómo grabar el sorteo</p>
+      <p class="tutorial-paso"><strong>1.</strong> Antes de sortear, abrí el panel de notificaciones<br>(deslizá desde arriba)</p>
+      <p class="tutorial-paso"><strong>2.</strong> Buscá el ícono "Grabador de pantalla" o "Screen Recorder"<br>(En Samsung: buscar en el panel rápido. En otros: puede estar en Ajustes → Funciones avanzadas)</p>
+      <p class="tutorial-paso"><strong>3.</strong> Iniciá la grabación y volvé al navegador</p>
+      <p class="tutorial-paso"><strong>4.</strong> Presioná SORTEAR</p>
+      <p class="tutorial-paso"><strong>5.</strong> Cuando terminen los festejos, detené la grabación desde el panel de notificaciones</p>
+    `;
+
+    const TUTORIAL_AMBOS = `
+      <p class="tutorial-titulo">Cómo grabar el sorteo</p>
+      <p class="tutorial-subtitulo">iPhone / iPad</p>
+      <p class="tutorial-paso"><strong>1.</strong> Antes de sortear, activá la grabación nativa:<br>Abrí el Centro de Control (deslizá desde arriba a la derecha)</p>
+      <p class="tutorial-paso"><strong>2.</strong> Tocá el ícono ⏺ de grabación de pantalla<br>(Si no lo ves, agregalo en Ajustes → Centro de Control)</p>
+      <p class="tutorial-paso"><strong>3.</strong> Volvé al navegador y presioná SORTEAR</p>
+      <p class="tutorial-paso"><strong>4.</strong> Cuando terminen los festejos, volvé al Centro de Control y detené la grabación<br>El video se guarda automáticamente en Fotos.</p>
+      <p class="tutorial-subtitulo tutorial-subtitulo-sep">Android</p>
+      <p class="tutorial-paso"><strong>1.</strong> Antes de sortear, abrí el panel de notificaciones<br>(deslizá desde arriba)</p>
+      <p class="tutorial-paso"><strong>2.</strong> Buscá el ícono "Grabador de pantalla" o "Screen Recorder"<br>(En Samsung: buscar en el panel rápido. En otros: puede estar en Ajustes → Funciones avanzadas)</p>
+      <p class="tutorial-paso"><strong>3.</strong> Iniciá la grabación y volvé al navegador</p>
+      <p class="tutorial-paso"><strong>4.</strong> Presioná SORTEAR</p>
+      <p class="tutorial-paso"><strong>5.</strong> Cuando terminen los festejos, detené la grabación desde el panel de notificaciones</p>
+    `;
+
+    function mostrarTutorial(variante) {
+      btnGrabar.style.display   = 'none';
+      tutorialEl.innerHTML      = variante === 'ios' ? TUTORIAL_IOS
+                                : variante === 'android' ? TUTORIAL_ANDROID
+                                : TUTORIAL_AMBOS;
+      tutorialEl.style.display  = 'block';
+    }
 
     if (esIOS) {
-      btnGrabar.style.display = 'none';
-      document.getElementById('msg-ios').style.display = 'block';
+      mostrarTutorial('ios');
+    } else if (esAndroid) {
+      mostrarTutorial('android');
     } else {
       btnGrabar.addEventListener('click', iniciarGrabacion);
     }
@@ -564,8 +639,7 @@
       if (grabando) return;
 
       if (!navigator.mediaDevices?.getDisplayMedia) {
-        btnGrabar.textContent = 'Grabación no disponible';
-        btnGrabar.disabled    = true;
+        mostrarTutorial('ambos');
         return;
       }
 
