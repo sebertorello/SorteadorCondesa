@@ -78,7 +78,8 @@
       margin-bottom: 8px;
     }
 
-    .campo input[type="text"] {
+    .campo input[type="text"],
+    .campo input[type="number"] {
       width: 100%;
       padding: 12px 14px;
       font-family: 'Montserrat', sans-serif;
@@ -89,8 +90,10 @@
       transition: border-color 0.2s;
     }
 
-    .campo input[type="text"]:focus { border-color: #333; }
-    .campo input[type="text"]::placeholder { color: #ccc; }
+    .campo input[type="text"]:focus,
+    .campo input[type="number"]:focus { border-color: #333; }
+    .campo input[type="text"]::placeholder,
+    .campo input[type="number"]::placeholder { color: #ccc; }
 
     /* Aviso de un solo uso */
     .admin-aviso {
@@ -417,9 +420,24 @@
       font-weight: 800;
       color: #f1f1f1;
       text-align: center;
-      margin-bottom: 18px;
       word-break: break-word;
       line-height: 1.2;
+    }
+
+    .ganador-nombre--multi {
+      font-size: 22px;
+      font-weight: 800;
+      color: #f1f1f1;
+      text-align: center;
+      word-break: break-word;
+      padding: 14px 0;
+      width: 100%;
+    }
+
+    .ganadores-sep {
+      width: 100%;
+      height: 1px;
+      background: #444;
     }
 
     .ganador-mensaje {
@@ -428,6 +446,7 @@
       color: #888;
       text-align: center;
       line-height: 1.6;
+      margin-top: 20px;
     }
 
     #btn-volver {
@@ -485,6 +504,22 @@
         al revelar el resultado. Para un nuevo sorteo con ganador fijo, actualizá la página.
       </p>
 
+      <div class="campo">
+        <label for="input-cantidad">Cantidad de ganadores</label>
+        <input
+          type="number"
+          id="input-cantidad"
+          min="1"
+          max="30"
+          placeholder="1 (por defecto)"
+          autocomplete="off"
+        >
+      </div>
+
+      <p class="admin-aviso">
+        Podés fijar hasta 30 ganadores. Los nombres predefinidos salen siempre; el resto se elige al azar.
+      </p>
+
       <div class="admin-feedback" id="admin-feedback"></div>
 
       <div class="admin-botones">
@@ -517,7 +552,7 @@
 
     <!-- Panel ruleta: track desplazable -->
     <div id="panel-ruleta">
-      <div class="ruleta-label">Sorteando...</div>
+      <div class="ruleta-label" id="ruleta-label">Sorteando...</div>
       <div class="ruleta-ventana">
         <div class="ruleta-linea-top"></div>
         <div class="ruleta-linea-bottom"></div>
@@ -527,9 +562,9 @@
 
     <!-- Panel ganador -->
     <div id="panel-ganador">
-      <div class="ganador-etiqueta">✦ Ganador ✦</div>
-      <div class="ganador-nombre" id="ganador-nombre"></div>
-      <div class="ganador-mensaje">¡Felicitaciones! Gracias a todos por participar.</div>
+      <div class="ganador-etiqueta" id="ganador-etiqueta"></div>
+      <div id="ganador-cuerpo"></div>
+      <div class="ganador-mensaje" id="ganador-mensaje"></div>
     </div>
 
     <button id="btn-volver">Volver a sortear</button>
@@ -551,11 +586,15 @@
     const textarea         = document.getElementById('textarea-participantes');
     const pantallaInicial  = document.getElementById('pantalla-inicial');
     const panelRuleta      = document.getElementById('panel-ruleta');
-    const panelGanador     = document.getElementById('panel-ganador');
-    const elGanadorNombre  = document.getElementById('ganador-nombre');
-    const canvas           = document.getElementById('canvas-confeti');
-    const ctx              = canvas.getContext('2d');
-    const acordeonBtn      = document.getElementById('btn-acordeon');
+    const panelGanador      = document.getElementById('panel-ganador');
+    const ganadorEtiqueta   = document.getElementById('ganador-etiqueta');
+    const ganadorCuerpo     = document.getElementById('ganador-cuerpo');
+    const ganadorMensaje    = document.getElementById('ganador-mensaje');
+    const ruletaLabel       = document.getElementById('ruleta-label');
+    const inputCantidad     = document.getElementById('input-cantidad');
+    const canvas            = document.getElementById('canvas-confeti');
+    const ctx               = canvas.getContext('2d');
+    const acordeonBtn       = document.getElementById('btn-acordeon');
     const acordeonContenido = document.getElementById('acordeon-contenido');
 
     // ─── Estado de grabación ───────────────────────────────────────
@@ -569,10 +608,14 @@
     // ══════════════════════════════════════════════════════════════
 
     function actualizarEstadoAdmin() {
-      const valor = localStorage.getItem('condesa_winner');
-      elAdminEstado.innerHTML = valor
-        ? `Ganador seteado: <strong>${valor}</strong>`
-        : 'Sorteo al azar (sin ganador predefinido)';
+      const winner   = localStorage.getItem('condesa_winner');
+      const cantidad = localStorage.getItem('condesa_cantidad');
+      const partes   = [];
+      if (winner)                             partes.push(`Ganador fijo: <strong>${winner}</strong>`);
+      if (cantidad && parseInt(cantidad) > 1) partes.push(`Cantidad: <strong>${cantidad}</strong>`);
+      elAdminEstado.innerHTML = partes.length
+        ? partes.join(' · ')
+        : 'Sorteo al azar (sin configuración guardada)';
     }
 
     actualizarEstadoAdmin();
@@ -582,19 +625,25 @@
       if (e.key === 'Enter') btnGuardarAdmin.click();
     });
 
-    // Guardar: solo persiste el dato y muestra confirmación. No navega.
+    // Guardar: persiste configuración y muestra confirmación. No navega.
     btnGuardarAdmin.addEventListener('click', () => {
-      const nombre = inputGanador.value.trim();
+      const nombre      = inputGanador.value.trim();
+      const cantidadRaw = parseInt(inputCantidad.value);
+      const cantidad    = (!isNaN(cantidadRaw) && cantidadRaw >= 1)
+        ? Math.min(30, cantidadRaw)
+        : 1;
+
+      localStorage.setItem('condesa_cantidad', cantidad);
 
       if (nombre) {
         localStorage.setItem('condesa_winner', nombre);
-        elAdminFeedback.textContent = `✓ Ganador guardado: ${nombre}`;
-        elAdminFeedback.className   = 'admin-feedback ok';
-        actualizarEstadoAdmin();
+        elAdminFeedback.textContent = `✓ Guardado: ${nombre} · ${cantidad} ganador${cantidad !== 1 ? 'es' : ''}`;
       } else {
-        elAdminFeedback.textContent = 'El sorteo será al azar.';
-        elAdminFeedback.className   = 'admin-feedback vacio';
+        localStorage.removeItem('condesa_winner');
+        elAdminFeedback.textContent = `✓ Guardado: ${cantidad} ganador${cantidad !== 1 ? 'es' : ''} al azar`;
       }
+      elAdminFeedback.className = 'admin-feedback ok';
+      actualizarEstadoAdmin();
     });
 
     // Continuar: va a Vista B sin tocar localStorage
@@ -726,17 +775,30 @@
         return;
       }
 
-      // Leer ganador predefinido en el momento exacto del click
-      const preset       = localStorage.getItem('condesa_winner');
-      const coincidencia = preset
-        ? participantes.find(p => p.trim().toLowerCase() === preset.trim().toLowerCase())
-        : null;
-      const ganador      = coincidencia || participantes[Math.floor(Math.random() * participantes.length)];
+      // Leer configuración en el momento exacto del click
+      const preset      = localStorage.getItem('condesa_winner');
+      const cantidadRaw = parseInt(localStorage.getItem('condesa_cantidad'));
+      const cantidad    = (!isNaN(cantidadRaw) && cantidadRaw >= 1)
+        ? Math.min(30, cantidadRaw)
+        : 1;
 
-      // Consumir la key — se usa una sola vez
-      localStorage.removeItem('condesa_winner');
+      // Construir array de ganadores: predefinido primero, resto al azar sin repetir
+      const pool     = [...participantes];
+      const ganadores = [];
 
-      animarRuleta(participantes, ganador);
+      if (preset) {
+        const idx = pool.findIndex(p => p.trim().toLowerCase() === preset.trim().toLowerCase());
+        if (idx !== -1) { ganadores.push(pool[idx]); pool.splice(idx, 1); }
+      }
+
+      while (ganadores.length < cantidad && pool.length > 0) {
+        const idx = Math.floor(Math.random() * pool.length);
+        ganadores.push(pool[idx]);
+        pool.splice(idx, 1);
+      }
+
+      // Las keys se borran al revelar el último ganador (en revelarFinal)
+      iniciarSecuencia(participantes, ganadores);
     });
 
     // ══════════════════════════════════════════════════════════════
@@ -769,9 +831,39 @@
     const POS_SLOW    = V_MAX * T_FAST_S;      // 2700 px
     const V_SLOW      = 3 * (TARGET_POS - POS_SLOW) / T_SLOW_S; // 1080 px/s
 
-    function animarRuleta(participantes, ganador) {
+    // ── Secuencia de ruletas, una por ganador ───────────────────
+
+    function iniciarSecuencia(participantes, ganadores) {
       pantallaInicial.style.display = 'none';
+      let turno = 0;
+
+      function siguiente() {
+        const ganador  = ganadores[turno];
+        const esUltimo = turno === ganadores.length - 1;
+        turno++;
+
+        animarRuleta(participantes, ganador, turno, ganadores.length, () => {
+          if (esUltimo) {
+            localStorage.removeItem('condesa_winner');
+            localStorage.removeItem('condesa_cantidad');
+            revelarFinal(ganadores);
+          } else {
+            mostrarIntermedio(ganador, siguiente);
+          }
+        });
+      }
+
+      siguiente();
+    }
+
+    function animarRuleta(participantes, ganador, turno, total, onFin) {
+      panelGanador.style.display    = 'none';
+      panelGanador.classList.remove('visible');
       panelRuleta.style.display     = 'flex';
+
+      ruletaLabel.textContent = total === 1
+        ? 'Sorteando...'
+        : `Sorteando ganador ${turno} de ${total}...`;
 
       // Construir array: WINNER_IDX nombres aleatorios + ganador + extras
       const arr = [];
@@ -822,7 +914,7 @@
           if (track.children[prevActiveIdx]) track.children[prevActiveIdx].classList.remove('activo');
           if (track.children[WINNER_IDX])    track.children[WINNER_IDX].classList.add('activo');
 
-          setTimeout(() => revelarGanador(ganador), 350);
+          setTimeout(onFin, 350);
           return;
         }
 
@@ -843,20 +935,51 @@
       requestAnimationFrame(frame);
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // Revelación del ganador
-    // ══════════════════════════════════════════════════════════════
+    // ── Pausa entre ruletas: muestra nombre 2s sin confeti ─────
 
-    function revelarGanador(ganador) {
-      panelRuleta.style.display   = 'none';
-      elGanadorNombre.textContent = ganador;
-      panelGanador.style.display  = 'flex';
+    function mostrarIntermedio(ganador, onFin) {
+      panelRuleta.style.display     = 'none';
+      ganadorEtiqueta.style.display = 'none';
+      ganadorMensaje.style.display  = 'none';
+      ganadorCuerpo.innerHTML = `<div class="ganador-nombre">${ganador}</div>`;
+      panelGanador.classList.remove('visible');
+      panelGanador.style.display = 'flex';
 
-      // Doble RAF: el browser debe pintar display:flex antes de disparar la transición
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          panelGanador.classList.add('visible');
-        });
+        requestAnimationFrame(() => { panelGanador.classList.add('visible'); });
+      });
+
+      setTimeout(() => {
+        panelGanador.classList.remove('visible');
+        setTimeout(() => { panelGanador.style.display = 'none'; onFin(); }, 420);
+      }, 2000);
+    }
+
+    // ── Panel final: todos los ganadores + confeti ──────────────
+
+    function revelarFinal(ganadores) {
+      panelRuleta.style.display = 'none';
+      const esMultiple = ganadores.length > 1;
+
+      ganadorEtiqueta.textContent   = esMultiple ? '✦ Ganadores ✦' : '✦ Ganador ✦';
+      ganadorEtiqueta.style.display = '';
+      ganadorMensaje.textContent    = esMultiple
+        ? '¡Felicitaciones a todos! Gracias por participar.'
+        : '¡Felicitaciones! Gracias a todos por participar.';
+      ganadorMensaje.style.display  = '';
+
+      ganadorCuerpo.innerHTML = esMultiple
+        ? ganadores.map((g, i) =>
+            (i > 0 ? '<div class="ganadores-sep"></div>' : '') +
+            `<div class="ganador-nombre ganador-nombre--multi">${g}</div>`
+          ).join('')
+        : `<div class="ganador-nombre">${ganadores[0]}</div>`;
+
+      panelGanador.classList.remove('visible');
+      panelGanador.style.display = 'flex';
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => { panelGanador.classList.add('visible'); });
       });
 
       iniciarConfeti();
@@ -945,6 +1068,7 @@
 
       panelGanador.classList.remove('visible');
       panelGanador.style.display = 'none';
+      ganadorCuerpo.innerHTML    = '';
       btnVolver.style.display    = 'none';
 
       textarea.value                = '';
